@@ -3,7 +3,9 @@ import requests
 import pandas as pd
 import streamlit as st
 
+# 改为备用域名
 BASE_URL = "https://fapi.binance.com"
+ALT_BASE_URL = "https://api.binance.com"
 REQUEST_DELAY = 0.05
 MAX_RETRIES = 3
 
