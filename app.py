@@ -247,7 +247,7 @@ st.subheader("📊 多空排行榜")
 
 ws_feed_obj = st.session_state.ws_feed
 long_df, short_df, total_count = load_ranking_cached(
-    max_price, ranking_limit, ws_feed=ws_feed_obj
+    max_price, ranking_limit
 )
 
 # 动态更新 WebSocket 订阅
