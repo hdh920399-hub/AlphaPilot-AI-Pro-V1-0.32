@@ -106,19 +106,17 @@ st.sidebar.title("⚙️ AlphaPilot v0.32")
 
 # 资金与筛选
 capital = st.sidebar.number_input(
-    "💰 虚拟本金", min_value=10，step=10, key="capital"
+    "💰 虚拟本金", min_value=10, step=10, key="capital"
 )
 max_price = st.sidebar.number_input(
-    "💲 最高价筛选 (USDT)", min_value=0.1,
-    value=st.session_state.max_price, step=0.1, key="max_price"
+    "💲 最高价筛选 (USDT)", min_value=0.1, value=st.session_state.max_price, step=0.1, key="max_price"
 )
 
 # 多空配置
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚖️ 多空配置")
 long_weight = st.sidebar.slider(
-    "做多权重", 0.0, 1.0, st.session_state.long_weight, 0.05,
-    key="long_weight"
+    "做多权重", 0.0, 1.0, float(st.session_state.long_weight), 0.05, key="long_weight"
 )
 short_weight = 1.0 - long_weight
 st.sidebar.caption(f"做空权重自动: {short_weight:.0%}")
@@ -126,46 +124,37 @@ st.sidebar.caption(f"做空权重自动: {short_weight:.0%}")
 # 风控参数
 st.sidebar.markdown("---")
 st.sidebar.subheader("🛡️ 风控参数")
-# stop_loss_pct（约第135行）
 stop_loss_pct = st.sidebar.slider(
-    "止损 (%)", 0.5, 10.0, float(st.session_state.stop_loss_pct), 0.5,
-    key="stop_loss_pct"
+    "止损 (%)", 0.5, 10.0, float(st.session_state.stop_loss_pct), 0.5, key="stop_loss_pct"
 ) / 100
-# take_profit_pct（约第140行）
 take_profit_pct = st.sidebar.slider(
-    "止盈 (%)", 1.0, 30.0, float(st.session_state.take_profit_pct), 1.0,
-    key="take_profit_pct"
+    "止盈 (%)", 1.0, 30.0, float(st.session_state.take_profit_pct), 1.0, key="take_profit_pct"
 ) / 100
 max_leverage = st.sidebar.selectbox(
-    "最大杠杆", [1, 2, 3, 5],
-    index=2, key="max_leverage"
+    "最大杠杆", [1, 2, 3, 5], index=2, key="max_leverage"
 )
 single_coin_limit = st.sidebar.slider(
-    "单币上限 (%)", 5.0, 30.0, float(st.session_state.single_coin_limit), 5.0,
-    key="single_coin_limit"
+    "单币上限 (%)", 5.0, 30.0, float(st.session_state.single_coin_limit), 5.0, key="single_coin_limit"
 ) / 100
+
 # 自动交易
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 自动交易")
 auto_refresh = st.sidebar.checkbox(
-    "启用自动刷新", value=st.session_state.auto_refresh,
-    key="auto_refresh"
+    "启用自动刷新", value=st.session_state.auto_refresh, key="auto_refresh"
 )
 auto_interval = st.sidebar.selectbox(
-    "扫描间隔(秒)", [30, 60, 120],
-    index=1, key="auto_interval"
+    "扫描间隔(秒)", [30, 60, 120], index=1, key="auto_interval"
 )
 enable_llm = st.sidebar.checkbox(
-    "启用大模型复盘", value=st.session_state.enable_llm,
-    key="enable_llm"
+    "启用大模型复盘", value=st.session_state.enable_llm, key="enable_llm"
 )
 
 # 排行榜数量
 st.sidebar.markdown("---")
 st.sidebar.subheader("📋 排行榜设置")
 ranking_limit = st.sidebar.slider(
-    "展示数量", 10, 100, st.session_state.ranking_limit, 10,
-    key="ranking_limit"
+    "展示数量", 10, 100, st.session_state.ranking_limit, 10, key="ranking_limit"
 )
 
 # WebSocket 状态
