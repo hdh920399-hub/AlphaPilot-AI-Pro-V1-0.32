@@ -127,12 +127,14 @@ st.sidebar.caption(f"做空权重自动: {short_weight:.0%}")
 # 风控参数
 st.sidebar.markdown("---")
 st.sidebar.subheader("🛡️ 风控参数")
+# stop_loss_pct（约第135行）
 stop_loss_pct = st.sidebar.slider(
-    "止损 (%)", 0.5, 10.0, st.session_state.stop_loss_pct, 0.5,
+    "止损 (%)", 0.5, 10.0, float(st.session_state.stop_loss_pct), 0.5,
     key="stop_loss_pct"
 ) / 100
+# take_profit_pct（约第140行）
 take_profit_pct = st.sidebar.slider(
-    "止盈 (%)", 1.0, 30.0, st.session_state.take_profit_pct, 1.0,
+    "止盈 (%)", 1.0, 30.0, float(st.session_state.take_profit_pct), 1.0,
     key="take_profit_pct"
 ) / 100
 max_leverage = st.sidebar.selectbox(
@@ -140,10 +142,9 @@ max_leverage = st.sidebar.selectbox(
     index=2, key="max_leverage"
 )
 single_coin_limit = st.sidebar.slider(
-    "单币上限 (%)", 5.0, 30.0, st.session_state.single_coin_limit, 5.0,
+    "单币上限 (%)", 5.0, 30.0, float(st.session_state.single_coin_limit), 5.0,
     key="single_coin_limit"
 ) / 100
-
 # 自动交易
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤖 自动交易")
