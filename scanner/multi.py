@@ -6,20 +6,17 @@ from data.binance import get_klines_cached, get_all_tickers, get_all_symbols, ge
 
 def _scan_coins_with_signal_impl(max_price=5.0, limit=20):
     """
-    内部实现：不使用 ws_feed 作为参数，而是从 session_state 中获取
-    这样 st.cache_data 可以正常哈希参数
+    内部实现：从 session_state 获取 ws_feed，避免哈希问题
     """
     symbols = get_all_symbols()
     tickers = get_all_tickers()
     results = []
 
-    # 从 session_state 获取 ws_feed（不作为函数参数）
     ws_feed = st.session_state.get("ws_feed")
 
     for sym in symbols:
         if not sym.endswith("USDT"):
             continue
-        # 混合价格获取
         price = get_price_hybrid(sym, ws_feed=ws_feed, tickers=tickers)
         if price is None or price > max_price:
             continue
@@ -49,18 +46,12 @@ def _scan_coins_with_signal_impl(max_price=5.0, limit=20):
 
 @st.cache_data(ttl=60, show_spinner="正在扫描市场...")
 def scan_cheap_coins_with_signal(max_price=5.0, limit=20):
-    """
-    带缓存的扫描函数
-    ws_feed 不在参数中，由内部从 session_state 获取
-    """
+    """带缓存的扫描函数"""
     return _scan_coins_with_signal_impl(max_price=max_price, limit=limit)
 
 
 def load_ranking_cached(max_price, limit, ws_feed=None):
-    """
-    封装调用，保持接口兼容
-    ws_feed 参数保留但不传入缓存函数，实际在 impl 中从 session_state 获取
-    """
+    """封装调用，保持接口兼容"""
     return scan_cheap_coins_with_signal(max_price=max_price, limit=limit)
 
 
