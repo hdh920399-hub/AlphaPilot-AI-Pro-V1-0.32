@@ -106,8 +106,7 @@ st.sidebar.title("⚙️ AlphaPilot v0.32")
 
 # 资金与筛选
 capital = st.sidebar.number_input(
-    "💰 虚拟本金", min_value=10, value=st.session_state.capital,
-    step=10, key="capital"
+    "💰 虚拟本金", min_value=10，step=10, key="capital"
 )
 max_price = st.sidebar.number_input(
     "💲 最高价筛选 (USDT)", min_value=0.1,
