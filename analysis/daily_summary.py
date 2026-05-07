@@ -5,6 +5,6 @@ def calculate_performance(trader):
     return {
         "初始本金": trader.initial_balance,
         "总资产": total_assets,
-        "收益率": (total_assets - trader.initial_balance) / trader.initial_balance * 100,
+        "收益率": (total_assets - trader.initial) / trader.initial_balance * 100,
         "已实现盈亏": sum(t["pnl"] for t in trader.trades if t.get("action") == "CLOSE"),
     }
