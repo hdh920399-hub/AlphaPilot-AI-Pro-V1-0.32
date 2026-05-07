@@ -5,22 +5,20 @@ from data.binance import get_klines_cached, get_all_tickers, get_all_symbols, ge
 
 
 def _scan_coins_with_signal_impl(max_price=5.0, limit=20):
-    """
-    内部实现：从 session_state 获取 ws_feed，避免哈希问题
-    """
+    """内部实现：从 session_state 获取 ws_feed，避免哈希问题"""
     symbols = get_all_symbols()
     tickers = get_all_tickers()
     results = []
-
+    
     ws_feed = st.session_state.get("ws_feed")
-
+    
     for sym in symbols:
         if not sym.endswith("USDT"):
             continue
         price = get_price_hybrid(sym, ws_feed=ws_feed, tickers=tickers)
         if price is None or price > max_price:
             continue
-        df = get_klines_cached(sym, "4h", limit=100)
+        df = get_klines_cached(sym, "4h", limit=80)  # 从 100 减少到 80，加快扫描
         if df is None or len(df) < 50:
             continue
         signal = calculate_directional_signal(df)
@@ -34,17 +32,21 @@ def _scan_coins_with_signal_impl(max_price=5.0, limit=20):
             "量比": signal["vol_ratio"],
             "信号摘要": signal["action"],
         })
-
+        
+        # 提前终止：一旦收集到足够数据就停止
+        if len(results) >= limit * 3:
+            break
+    
     if not results:
         return pd.DataFrame(), pd.DataFrame(), 0
-
+    
     df = pd.DataFrame(results)
     df_long = df.sort_values("做多分", ascending=False).head(limit)
     df_short = df.sort_values("做空分", ascending=False).head(limit)
     return df_long, df_short, len(results)
 
 
-@st.cache_data(ttl=60, show_spinner="正在扫描市场...")
+@st.cache_data(ttl=120, show_spinner="正在扫描市场...")  # TTL 从 60 延长到 120
 def scan_cheap_coins_with_signal(max_price=5.0, limit=20):
     """带缓存的扫描函数"""
     return _scan_coins_with_signal_impl(max_price=max_price, limit=limit)
