@@ -142,7 +142,7 @@ def get_current_price(symbol, tickers=None):
 def get_price_hybrid(symbol, ws_feed=None, tickers=None):
     """混合价格获取：优先 WebSocket，降级 REST"""
     # 优先 WebSocket 实时价格
-    if ws_feed and ws_feed.is_running:
+    if ws_feed and ws_feed.running:
         price = ws_feed.get_price(symbol)
         if price is not None:
             return price
