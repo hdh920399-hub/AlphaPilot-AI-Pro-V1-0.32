@@ -12,7 +12,7 @@ SLIPPAGE = 0.001
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "zhipu")
 ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "glm-4-flash")
+LLM_MODEL = os.getenv("LLM_MODEL", "glm-4.7-flash")
 
 # ========== 资金池比例 ==========
 LONG_BUDGET_RATIO = 0.6
