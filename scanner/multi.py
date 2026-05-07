@@ -4,15 +4,17 @@ from engine.ai_signals import calculate_directional_signal
 from data.binance import get_klines_cached, get_all_tickers, get_all_symbols, get_price_hybrid
 
 
-@st.cache_data(ttl=60, show_spinner="正在扫描市场...")
-def scan_cheap_coins_with_signal(max_price=5.0, limit=20, ws_feed=None):
+def _scan_coins_with_signal_impl(max_price=5.0, limit=20):
     """
-    扫描低价币并计算多空信号
-    v0.32：优先使用 WebSocket 实时价格
+    内部实现：不使用 ws_feed 作为参数，而是从 session_state 中获取
+    这样 st.cache_data 可以正常哈希参数
     """
     symbols = get_all_symbols()
     tickers = get_all_tickers()
     results = []
+
+    # 从 session_state 获取 ws_feed（不作为函数参数）
+    ws_feed = st.session_state.get("ws_feed")
 
     for sym in symbols:
         if not sym.endswith("USDT"):
@@ -45,8 +47,21 @@ def scan_cheap_coins_with_signal(max_price=5.0, limit=20, ws_feed=None):
     return df_long, df_short, len(results)
 
 
+@st.cache_data(ttl=60, show_spinner="正在扫描市场...")
+def scan_cheap_coins_with_signal(max_price=5.0, limit=20):
+    """
+    带缓存的扫描函数
+    ws_feed 不在参数中，由内部从 session_state 获取
+    """
+    return _scan_coins_with_signal_impl(max_price=max_price, limit=limit)
+
+
 def load_ranking_cached(max_price, limit, ws_feed=None):
-    return scan_cheap_coins_with_signal(max_price=max_price, limit=limit, ws_feed=ws_feed)
+    """
+    封装调用，保持接口兼容
+    ws_feed 参数保留但不传入缓存函数，实际在 impl 中从 session_state 获取
+    """
+    return scan_cheap_coins_with_signal(max_price=max_price, limit=limit)
 
 
 def get_priority_symbols(ranking_df, max_count=40, holdings=None):
