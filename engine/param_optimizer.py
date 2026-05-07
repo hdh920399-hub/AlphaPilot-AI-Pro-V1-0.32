@@ -1,0 +1,2 @@
+def optimize_params():
+    return {"stop_loss": 0.05, "take_profit": 0.15}
