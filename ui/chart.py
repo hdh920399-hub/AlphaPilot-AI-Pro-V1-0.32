@@ -3,14 +3,7 @@ from plotly.subplots import make_subplots
 
 
 def create_pro_chart(df, symbol, interval="4h"):
-    """
-    v0.32 专业K线图（币安合约风格）
-    - 深色主题
-    - 绿涨红跌
-    - MA7/25/99 均线
-    - 布林带
-    - 成交量柱状图
-    """
+    """专业K线图（币安合约风格）"""
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
@@ -35,59 +28,35 @@ def create_pro_chart(df, symbol, interval="4h"):
     )
 
     # 均线
-    if len(df) >= 7:
-        df["ma7"] = df["close"].rolling(7).mean()
-        fig.add_trace(
-            go.Scatter(
-                x=df.index, y=df["ma7"], name="MA7",
-                line=dict(color="#ffeb3b", width=1)
-            ),
-            row=1, col=1
-        )
-    if len(df) >= 25:
-        df["ma25"] = df["close"].rolling(25).mean()
-        fig.add_trace(
-            go.Scatter(
-                x=df.index, y=df["ma25"], name="MA25",
-                line=dict(color="#ff9800", width=1)
-            ),
-            row=1, col=1
-        )
-    if len(df) >= 99:
-        df["ma99"] = df["close"].rolling(99).mean()
-        fig.add_trace(
-            go.Scatter(
-                x=df.index, y=df["ma99"], name="MA99",
-                line=dict(color="#e91e63", width=1)
-            ),
-            row=1, col=1
-        )
+    for period, color in [(7, "#ffeb3b"), (25, "#ff9800"), (99, "#e91e63")]:
+        if len(df) >= period:
+            ma = df["close"].rolling(period).mean()
+            fig.add_trace(
+                go.Scatter(x=df.index, y=ma, name=f"MA{period}",
+                          line=dict(color=color, width=1)),
+                row=1, col=1
+            )
 
     # 布林带
     if len(df) >= 20:
-        df["bb_mid"] = df["close"].rolling(20).mean()
-        df["bb_std"] = df["close"].rolling(20).std()
-        df["bb_up"] = df["bb_mid"] + 2 * df["bb_std"]
-        df["bb_low"] = df["bb_mid"] - 2 * df["bb_std"]
+        bb_mid = df["close"].rolling(20).mean()
+        bb_std = df["close"].rolling(20).std()
+        bb_up = bb_mid + 2 * bb_std
+        bb_low = bb_mid - 2 * bb_std
         fig.add_trace(
-            go.Scatter(
-                x=df.index, y=df["bb_up"], name="布林上轨",
-                line=dict(color="gray", dash="dot", width=0.8)
-            ),
+            go.Scatter(x=df.index, y=bb_up, name="布林上轨",
+                      line=dict(color="gray", dash="dot", width=0.8)),
             row=1, col=1
         )
         fig.add_trace(
-            go.Scatter(
-                x=df.index, y=df["bb_low"], name="布林下轨",
-                line=dict(color="gray", dash="dot", width=0.8)
-            ),
+            go.Scatter(x=df.index, y=bb_low, name="布林下轨",
+                      line=dict(color="gray", dash="dot", width=0.8)),
             row=1, col=1
         )
-        # 布林带填充
         fig.add_trace(
             go.Scatter(
                 x=df.index.tolist() + df.index.tolist()[::-1],
-                y=df["bb_up"].tolist() + df["bb_low"].tolist()[::-1],
+                y=bb_up.tolist() + bb_low.tolist()[::-1],
                 fill="toself",
                 fillcolor="rgba(128,128,128,0.1)",
                 line=dict(color="rgba(255,255,255,0)"),
@@ -102,10 +71,7 @@ def create_pro_chart(df, symbol, interval="4h"):
         for c, o in zip(df["close"], df["open"])
     ]
     fig.add_trace(
-        go.Bar(
-            x=df.index, y=df["volume"], name="成交量",
-            marker=dict(color=colors)
-        ),
+        go.Bar(x=df.index, y=df["volume"], name="成交量", marker=dict(color=colors)),
         row=2, col=1
     )
 
@@ -115,13 +81,7 @@ def create_pro_chart(df, symbol, interval="4h"):
         height=700,
         hovermode="x unified",
         xaxis_rangeslider_visible=False,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0
-        ),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         margin=dict(l=10, r=10, t=40, b=10),
         font=dict(family="Arial, sans-serif", size=12),
     )
