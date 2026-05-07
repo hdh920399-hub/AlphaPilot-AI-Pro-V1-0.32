@@ -1,11 +1,6 @@
 """
 Binance WebSocket 实时行情源
-- 单连接订阅多币种（组合流）
-- 有界缓存防止内存泄漏
-- 自动重连 + 心跳保持
-- 内存安全，适配 Railway 512MB
 """
-
 import json
 import threading
 import time
@@ -18,8 +13,6 @@ logger = logging.getLogger("BinanceWS")
 
 
 class BinanceWebSocketFeed:
-    """Railway 512MB 内存优化的 WebSocket 行情源"""
-
     MAX_CACHE_SIZE = 200
     PRICE_STALE_SECONDS = 10
     RECONNECT_DELAY = 5
@@ -31,15 +24,12 @@ class BinanceWebSocketFeed:
         self.volumes: Dict[str, float] = {}
         self.last_update: Dict[str, float] = {}
         self.subscribed_symbols: Set[str] = set()
-
         self.ws = None
         self.wst = None
         self.is_running = False
         self.reconnect_attempts = 0
         self._lock = threading.RLock()
         self._stop_event = threading.Event()
-
-    # ========== WebSocket 回调 ==========
 
     def _on_open(self, ws):
         logger.info("✅ WebSocket 连接已建立")
@@ -61,7 +51,6 @@ class BinanceWebSocketFeed:
                         self.price_changes[symbol] = change_pct
                         self.volumes[symbol] = volume
                         self.last_update[symbol] = time.time()
-                    # 内存保护：缓存超限时清理最旧数据
                     self._trim_cache_if_needed()
         except json.JSONDecodeError:
             pass
@@ -71,10 +60,7 @@ class BinanceWebSocketFeed:
     def _trim_cache_if_needed(self):
         with self._lock:
             if len(self.prices) > self.MAX_CACHE_SIZE:
-                stale = sorted(
-                    self.prices.keys(),
-                    key=lambda s: self.last_update.get(s, 0)
-                )
+                stale = sorted(self.prices.keys(), key=lambda s: self.last_update.get(s, 0))
                 for s in stale[:20]:
                     self.prices.pop(s, None)
                     self.price_changes.pop(s, None)
@@ -90,14 +76,10 @@ class BinanceWebSocketFeed:
         if not self._stop_event.is_set():
             self._schedule_reconnect()
 
-    # ========== 连接管理 ==========
-
     def _schedule_reconnect(self):
         if self.reconnect_attempts >= self.MAX_RECONNECT_ATTEMPTS:
-            logger.error("已达最大重连次数")
             return
         delay = min(self.RECONNECT_DELAY * (2 ** self.reconnect_attempts), 60)
-        logger.info(f"将在 {delay}s 后重连 (第{self.reconnect_attempts+1}次)")
         time.sleep(delay)
         self.reconnect_attempts += 1
         if not self._stop_event.is_set():
@@ -106,7 +88,6 @@ class BinanceWebSocketFeed:
     def _connect(self):
         symbols = self._get_subscribe_list()
         if not symbols:
-            logger.warning("无订阅币种，跳过连接")
             return
         streams = [f"{s}@ticker" for s in symbols]
         url = "wss://fstream.binance.com/stream?streams=" + "/".join(streams)
@@ -117,14 +98,12 @@ class BinanceWebSocketFeed:
             on_error=self._on_error,
             on_close=self._on_close
         )
-
         def run():
             try:
                 self.ws.run_forever(ping_interval=30, ping_timeout=10)
             except Exception as e:
                 logger.error(f"连接异常退出: {e}")
                 self.is_running = False
-
         self.wst = threading.Thread(target=run, daemon=True)
         self.wst.start()
 
@@ -142,13 +121,6 @@ class BinanceWebSocketFeed:
             self.subscribed_symbols = set(WS_DEFAULT_SYMBOLS)
         self._connect()
 
-    def stop(self):
-        self._stop_event.set()
-        self.is_running = False
-        if self.ws:
-            self.ws.close()
-        self.subscribed_symbols.clear()
-
     def update_symbols(self, new_symbols):
         new_set = {
             s.lower() + "usdt" if not s.lower().endswith("usdt") else s.lower()
@@ -159,15 +131,6 @@ class BinanceWebSocketFeed:
             if self.ws:
                 self.ws.close()
             self._connect()
-
-    def reduce_to_critical(self, holdings_symbols):
-        """内存紧急降级：只保留持仓+核心币种"""
-        critical = {"btcusdt", "ethusdt", "solusdt"}
-        for sym in holdings_symbols:
-            critical.add(sym.lower() + "usdt" if not sym.lower().endswith("usdt") else sym.lower())
-        self.update_symbols(list(critical))
-
-    # ========== 数据接口 ==========
 
     def get_price(self, symbol: str) -> Optional[float]:
         if not symbol:
@@ -181,33 +144,16 @@ class BinanceWebSocketFeed:
                     return price
         return None
 
-    def get_all_active_prices(self) -> Dict[str, float]:
-        now = time.time()
-        result = {}
-        with self._lock:
-            for sym, price in self.prices.items():
-                if now - self.last_update.get(sym, 0) < self.PRICE_STALE_SECONDS:
-                    result[sym] = price
-        return result
-
     def get_price_change(self, symbol: str) -> float:
         with self._lock:
             return self.price_changes.get(symbol.lower(), 0.0)
 
-    def is_healthy(self) -> bool:
-        if not self.is_running:
-            return False
-        with self._lock:
-            if not self.last_update:
-                return False
-            latest = max(self.last_update.values())
-            return (time.time() - latest) < 20
-
     def get_connection_status(self) -> str:
         if not self.is_running:
             return "🔴 未连接"
-        if self.is_healthy():
-            return "🟢 实时数据"
+        with self._lock:
+            if self.last_update and (time.time() - max(self.last_update.values())) < 20:
+                return "🟢 实时数据"
         return "🟡 数据延迟"
 
     def _get_subscribe_list(self) -> list:
