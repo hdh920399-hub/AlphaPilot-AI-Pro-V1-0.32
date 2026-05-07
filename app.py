@@ -29,14 +29,14 @@ st.set_page_config(
 
 # ========== 初始化 Session State ==========
 DEFAULTS = {
-    "capital": 100,
+    "capital": 100.0,
     "max_price": 5.0,
     "stop_loss_pct": 2.0,
     "take_profit_pct": 5.0,
     "long_weight": 0.6,
     "auto_interval": 60,
     "max_positions": 5,
-    "risk_pct": 5,
+    "risk_pct": 5.0,
     "long_min_score": 60,
     "short_min_score": 60,
     "auto_refresh": True,
@@ -79,7 +79,6 @@ preload()
 
 # ========== 内存监控函数 ==========
 def get_memory_mb():
-    """获取当前进程内存占用"""
     try:
         process = psutil.Process(os.getpid())
         return process.memory_info().rss / 1024 / 1024
@@ -88,7 +87,6 @@ def get_memory_mb():
 
 
 def check_memory_health():
-    """内存超限时自动降级"""
     memory_mb = get_memory_mb()
     if memory_mb > WS_TARGET_MEMORY_MB:
         ws_feed = st.session_state.ws_feed
@@ -104,12 +102,12 @@ def check_memory_health():
 # ========== 侧边栏 ==========
 st.sidebar.title("⚙️ AlphaPilot v0.32")
 
-# 资金与筛选
+# 资金与筛选（去掉 value= 避免 Session State 警告）
 capital = st.sidebar.number_input(
-    "💰 虚拟本金", min_value=10, step=10, key="capital"
+    "💰 虚拟本金", min_value=10.0, step=10.0, key="capital"
 )
 max_price = st.sidebar.number_input(
-    "💲 最高价筛选 (USDT)", min_value=0.1, value=st.session_state.max_price, step=0.1, key="max_price"
+    "💲 最高价筛选 (USDT)", min_value=0.1, step=0.1, key="max_price"
 )
 
 # 多空配置
@@ -159,15 +157,16 @@ ranking_limit = st.sidebar.slider(
 
 # WebSocket 状态
 st.sidebar.markdown("---")
-ws_status = st.session_state.ws_feed.get_connection_status()
-subscription_count = len(st.session_state.ws_feed.subscribed_symbols)
+ws_feed_obj = st.session_state.ws_feed
+ws_status = ws_feed_obj.get_connection_status()
+subscription_count = len(ws_feed_obj.subscribed_symbols)
 memory_mb = get_memory_mb()
 st.sidebar.caption(f"📡 WS: {ws_status} | 订阅: {subscription_count}")
 st.sidebar.caption(f"💾 内存: {memory_mb:.0f}MB / 512MB")
-st.sidebar.progress(memory_mb / 512)
+st.sidebar.progress(min(memory_mb / 512, 1.0))
 
 # 同步本金
-if st.session_state.capital != capital:
+if abs(st.session_state.capital - capital) > 0.01:
     st.session_state.capital = capital
     st.session_state.budget_manager = BudgetManager(
         capital, LONG_BUDGET_RATIO, SHORT_BUDGET_RATIO
@@ -183,60 +182,58 @@ check_memory_health()
 
 # ===== 龙头识别（WebSocket 实时价格） =====
 st.subheader("🏆 龙头识别 (实时)")
-ws_feed = st.session_state.ws_feed
 col_leader_long, col_leader_short = st.columns(2)
 
 with col_leader_long:
     st.markdown("**多头龙头**")
     long_leaders = [
-        ("BTC", "BTCUSDT", 87200),
-        ("ETH", "ETHUSDT", 3200),
-        ("SOL", "SOLUSDT", 140),
-        ("BNB", "BNBUSDT", 610),
+        ("BTC", "BTCUSDT"),
+        ("ETH", "ETHUSDT"),
+        ("SOL", "SOLUSDT"),
+        ("BNB", "BNBUSDT"),
     ]
     leader_lines = []
-    for name, sym, _ in long_leaders:
-        price = ws_feed.get_price(sym)
-        change = ws_feed.get_price_change(sym)
+    for name, sym in long_leaders:
+        price = ws_feed_obj.get_price(sym)
+        change = ws_feed_obj.get_price_change(sym) if hasattr(ws_feed_obj, 'get_price_change') else 0.0
         if price:
             leader_lines.append(
-                f"| {name} | {price:,.2f} | {change:+.2f}% | "
-                f"{'🟢' if change>0 else '🔴' if change<0 else '⚪'} |"
+                f"| {name} | {price:,.2f} | {change:+.2f}% | {'🟢' if change>0 else '🔴' if change<0 else '⚪'} |"
             )
         else:
             leader_lines.append(f"| {name} | --- | --- | --- |")
-    st.markdown("| 币种 | 实时价 | 24h涨跌 | 方向 |\n|---|---|---|---|\n" + "\n".join(leader_lines))
+    st.markdown(
+        "| 币种 | 实时价 | 24h涨跌 | 方向 |\n|---|---|---|---|\n" + "\n".join(leader_lines)
+    )
 
 with col_leader_short:
     st.markdown("**空头龙头**")
     short_leaders = [
-        ("TRUMP", "TRUMPUSDT", 8),
-        ("WIF", "WIFUSDT", 0.5),
-        ("ADA", "ADAUSDT", 0.4),
-        ("DOGE", "DOGEUSDT", 0.1),
+        ("TRUMP", "TRUMPUSDT"),
+        ("WIF", "WIFUSDT"),
+        ("ADA", "ADAUSDT"),
+        ("DOGE", "DOGEUSDT"),
     ]
     leader_lines = []
-    for name, sym, _ in short_leaders:
-        price = ws_feed.get_price(sym)
-        change = ws_feed.get_price_change(sym)
+    for name, sym in short_leaders:
+        price = ws_feed_obj.get_price(sym)
+        change = ws_feed_obj.get_price_change(sym) if hasattr(ws_feed_obj, 'get_price_change') else 0.0
         if price:
             leader_lines.append(
-                f"| {name} | {price:,.4f} | {change:+.2f}% | "
-                f"{'🟢' if change>0 else '🔴' if change<0 else '⚪'} |"
+                f"| {name} | {price:,.4f} | {change:+.2f}% | {'🟢' if change>0 else '🔴' if change<0 else '⚪'} |"
             )
         else:
             leader_lines.append(f"| {name} | --- | --- | --- |")
-    st.markdown("| 币种 | 实时价 | 24h涨跌 | 方向 |\n|---|---|---|---|\n" + "\n".join(leader_lines))
+    st.markdown(
+        "| 币种 | 实时价 | 24h涨跌 | 方向 |\n|---|---|---|---|\n" + "\n".join(leader_lines)
+    )
 
 
 # ===== 排行榜 =====
 st.markdown("---")
 st.subheader("📊 多空排行榜")
 
-ws_feed_obj = st.session_state.ws_feed
-long_df, short_df, total_count = load_ranking_cached(
-    max_price, ranking_limit
-)
+long_df, short_df, total_count = load_ranking_cached(max_price, ranking_limit)
 
 # 动态更新 WebSocket 订阅
 priority_symbols = get_priority_symbols(long_df)
@@ -253,7 +250,7 @@ with col_left:
     if not long_df.empty:
         st.dataframe(
             long_df[["币种", "价格", "做多分", "RSI", "量比", "信号摘要"]],
-            use_container_width=True, hide_index=True
+            width='stretch', hide_index=True
         )
     else:
         st.info("暂无符合条件的做多币种")
@@ -263,7 +260,7 @@ with col_right:
     if not short_df.empty:
         st.dataframe(
             short_df[["币种", "价格", "做空分", "RSI", "量比", "信号摘要"]],
-            use_container_width=True, hide_index=True
+            width='stretch', hide_index=True
         )
     else:
         st.info("暂无符合条件的做空币种")
@@ -288,9 +285,9 @@ with col_sel:
         ]
         idx = 0
         if st.session_state.custom_symbol:
+            clean = st.session_state.custom_symbol.replace("USDT", "")
             idx = next(
-                (i for i, opt in enumerate(options_list)
-                 if opt.startswith(st.session_state.custom_symbol.replace("USDT", ""))),
+                (i for i, opt in enumerate(options_list) if opt.startswith(clean)),
                 0
             )
         selected_label = st.selectbox(
@@ -315,8 +312,7 @@ with col_search:
 
 with col_interval:
     interval = st.selectbox(
-        "K线周期", ["15m", "1h", "4h", "1d"],
-        index=2, key="interval"
+        "K线周期", ["15m", "1h", "4h", "1d"], index=2, key="interval"
     )
 
 st.caption(f"📌 当前分析: {selected_symbol} | {interval}")
@@ -327,7 +323,7 @@ if df is not None and len(df) >= 20:
 
     with col_chart:
         fig = create_pro_chart(df, selected_symbol, interval)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with col_signal:
         st.subheader("🤖 AI 实时信号")
@@ -371,7 +367,7 @@ if st.session_state.trader.holdings:
         }
         for s, p in hold.items()
     ])
-    st.dataframe(df_hold, use_container_width=True, hide_index=True)
+    st.dataframe(df_hold, width='stretch', hide_index=True)
 else:
     st.info("暂无持仓")
 
@@ -399,7 +395,7 @@ st.markdown("---")
 st.subheader("📝 交易历史")
 if st.session_state.trader.trades:
     df_trades = pd.DataFrame(st.session_state.trader.trades)
-    st.dataframe(df_trades, use_container_width=True, hide_index=True)
+    st.dataframe(df_trades, width='stretch', hide_index=True)
 else:
     st.info("暂无交易记录")
 
