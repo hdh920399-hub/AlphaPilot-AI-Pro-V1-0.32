@@ -91,7 +91,7 @@ with st.sidebar:
     st.slider("展示数量", 10, 100, key="ranking_limit")
     st.markdown("---")
     ws = st.session_state.ws_feed
-    st.caption(f"WS: {ws.get_status()} | 订阅: {len(ws.subscribed_symbols)}")
+    st.caption(f"WS: {ws.get_status()} | 订阅: {len(ws.subscribed)}")
     st.caption(f"内存: {get_memory_mb():.0f}MB / 512MB")
     if st.button("💾 保存快照"):
         st.session_state._trader_backup = json.dumps(st.session_state.trader.to_dict())
