@@ -43,7 +43,7 @@ DEFAULTS = {
     "enable_short": True,
     "enable_llm": True,
     "max_leverage": 3,
-    "single_coin_limit": 15,
+    "single_coin_limit": 15.0,
     "ranking_limit": MAX_RANKING_DISPLAY,
     "custom_symbol": "",
     "custom_input": "",
